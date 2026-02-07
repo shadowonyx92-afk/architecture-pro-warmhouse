@@ -1,0 +1,19 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+title Smart Home — C4 Context Diagram (AS-IS)
+
+Person(user, "Пользователь", "Управляет умным домом, просматривает данные")
+
+System(smarthome, "Smart Home Monolith", "Монолитное приложение на Go. Управление устройствами и получение температуры через REST API")
+
+System_Ext(tempApi, "Temperature API", "Внешний сервис. Отдаёт данные о температуре по HTTP")
+System_Ext(sensors, "Датчики", "Физические или виртуальные устройства, поставляющие данные")
+
+Rel(user, smarthome, "Управляет устройствами", "HTTP / JSON")
+Rel(smarthome, tempApi, "Запрашивает текущую температуру (синхронно)", "HTTP / JSON")
+Rel(tempApi, smarthome, "Возвращает данные о температуре", "HTTP / JSON")
+Rel(smarthome, sensors, "Опрашивает датчики и получает данные", "Протокол датчика / API")
+
+
+@enduml
