@@ -1,0 +1,66 @@
+@startuml
+title Device Management Service — C4 Code (TO-BE)
+
+class DeviceApiController {
+  +createDevice()
+  +updateDevice()
+  +sendCommand()
+}
+
+class Device {
+  +id: UUID
+  +name: String
+  +type: DeviceType
+  +location: String
+  +status: DeviceStatus
+  +value: Float
+}
+
+enum DeviceType {
+  TEMPERATURE
+  LIGHT
+  GATE
+}
+
+enum DeviceStatus {
+  ACTIVE
+  INACTIVE
+  ERROR
+  UNKNOWN
+}
+
+interface DeviceAdapter {
+  +send(device: Device)
+  +read(deviceId: UUID): Device
+}
+
+class TemperatureAdapter
+class LightAdapter
+class GateAdapter
+
+DeviceAdapter <|.. TemperatureAdapter
+DeviceAdapter <|.. LightAdapter
+DeviceAdapter <|.. GateAdapter
+
+class DeviceRepository {
+  +save(device: Device)
+  +findById(id: UUID): Device
+  +findAll(): List<Device>
+}
+
+class DeviceService {
+  -repository: DeviceRepository
+  -adapters: Map<DeviceType, DeviceAdapter>
+
+  +register(device: Device)
+  +updateState(deviceId: UUID)
+  +control(deviceId: UUID, action: String)
+  +get(deviceId: UUID): Device
+}
+
+DeviceApiController --> DeviceService
+DeviceService --> DeviceRepository
+DeviceService --> DeviceAdapter
+DeviceService --> Device
+
+@enduml

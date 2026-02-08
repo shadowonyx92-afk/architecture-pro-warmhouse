@@ -1,0 +1,22 @@
+@startuml
+!define C4P https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master
+!includeurl C4P/C4_Component.puml
+
+title Smart Home — C4 Component Diagram (AS-IS)
+
+Container(apiServer, "SmartHome API Server", "Go (Gin)", "Обрабатывает REST API для сенсоров и управления температурой")
+
+' Компоненты внутри API сервера
+Component(sensorHandler, "SensorHandler (sensor.go)", "Go", "Обрабатывает HTTP-запросы для сенсоров и маршрутизирует к DB или TemperatureService")
+Component(dbLayer, "DB Layer (db.DB)", "Go", "Выполняет CRUD операции с PostgreSQL")
+Component(tempService, "TemperatureService", "Go", "Получает актуальные данные температуры из внешнего Temperature API")
+
+Container_Ext(temperatureAPI, "Temperature API", "HTTP Service", "Внешний сервис для получения актуальной температуры")
+
+' Взаимодействия между компонентами
+Rel(apiServer, sensorHandler, "Маршрутизирует HTTP-запросы к соответствующим методам")
+Rel(sensorHandler, dbLayer, "Читает и записывает данные сенсоров")
+Rel(sensorHandler, tempService, "Получает актуальные значения температуры")
+Rel(tempService, temperatureAPI, "Получает актуальную температуру для сенсоров", "HTTP/JSON")
+
+@enduml

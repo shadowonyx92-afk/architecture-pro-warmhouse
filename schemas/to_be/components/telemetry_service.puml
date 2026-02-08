@@ -1,0 +1,21 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title Telemetry Service — C4 Components Diagram (TO-BE)
+
+Container_Boundary(telemetrySvc, "Telemetry Service") {
+    Component(api, "Telemetry API Controller", "REST Controller", "Предоставляет API для получения телеметрии")
+    Component(ingestor, "Telemetry Ingestor", "Service", "Приём и обработка телеметрии от устройств")
+    Component(repo, "Telemetry Repository", "Repository", "Хранение телеметрии")
+    Component(events, "Event Publisher", "Service", "Публикация событий/уведомлений для Automation Service")
+}
+
+Container_Ext(deviceSvc, "Device Management Service")
+Container_Ext(automationSvc, "Automation Service")
+
+Rel(deviceSvc, ingestor, "Sends telemetry events")
+Rel(ingestor, repo, "Stores telemetry")
+Rel(events, automationSvc, "Publishes events / triggers")
+Rel(api, automationSvc, "Provides API for querying telemetry")
+
+@enduml

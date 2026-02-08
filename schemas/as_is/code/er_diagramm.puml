@@ -1,0 +1,18 @@
+@startuml
+!define TABLE(name,desc) class name as "desc" << (T,#FFAAAA) >>
+
+title ER диаграмма (AS IS)
+
+TABLE(Sensors, "sensors") {
+  + id : int <<PK>>
+    name : string
+    type : string
+    location : string
+    value : float
+    unit : string
+    status : string
+    last_updated : datetime
+    created_at : datetime
+}
+
+@enduml

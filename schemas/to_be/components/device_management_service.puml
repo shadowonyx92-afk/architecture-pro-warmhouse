@@ -1,0 +1,34 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+Container_Boundary(deviceSvc, "Device Management Service") {
+    Component(api, "Device API Controller", "REST Controller", "Принимает запросы от API Gateway")
+    Component(service, "Device Service", "Domain Service", "Бизнес-логика управления устройствами")
+    Component(registry, "Device Repository", "Repository", "Хранение и доступ к данным устройств")
+    Component(adapterIfc, "Device Adapter Interface", "Interface", "Единый контракт для интеграции устройств")
+    Component(tempAdapter, "Temperature Adapter", "Adapter", "Интеграция с temperature_api")
+    Component(lightAdapter, "Light Adapter", "Adapter", "Интеграция с освещением")
+    Component(gateAdapter, "Gate Adapter", "Adapter", "Интеграция с воротами")
+    Component(events, "Event Publisher", "Service", "Публикация телеметрии и событий")
+}
+
+Container_Ext(apiGateway, "API Gateway")
+Container_Ext(telemetry, "Telemetry Service")
+System_Ext(partners, "Partner Devices / Vendor APIs")
+
+Rel(apiGateway, api, "REST")
+Rel(api, service, "Calls")
+
+Rel(service, registry, "CRUD")
+Rel(service, adapterIfc, "Uses")
+
+Rel(adapterIfc, tempAdapter, "Implemented by")
+Rel(adapterIfc, lightAdapter, "Implemented by")
+Rel(adapterIfc, gateAdapter, "Implemented by")
+
+Rel(adapterIfc, partners, "HTTP / MQTT")
+
+Rel(service, events, "Publishes events")
+Rel(events, telemetry, "Telemetry stream")
+
+@enduml

@@ -1,0 +1,38 @@
+@startuml
+title UML Диаграмма последовательности — CRUD сенсоров (AS IS)
+
+actor Client
+participant "SensorHandler" as SH
+participant "DB Layer" as DB
+
+== Создание сенсора ==
+Client -> SH : POST /api/v1/sensors {SensorCreate}
+SH -> DB : CreateSensor(SensorCreate)
+DB --> SH : Sensor (с ID)
+SH --> Client : 201 Created {Sensor}
+
+== Получение сенсора по ID ==
+Client -> SH : GET /api/v1/sensors/:id
+SH -> DB : GetSensorByID(id)
+DB --> SH : Sensor
+SH --> Client : 200 OK {Sensor}
+
+== Обновление сенсора ==
+Client -> SH : PUT /api/v1/sensors/:id {SensorUpdate}
+SH -> DB : UpdateSensor(id, SensorUpdate)
+DB --> SH : Sensor (обновлённый)
+SH --> Client : 200 OK {Sensor}
+
+== Удаление сенсора ==
+Client -> SH : DELETE /api/v1/sensors/:id
+SH -> DB : DeleteSensor(id)
+DB --> SH : success / error
+SH --> Client : 200 OK / 404 Not Found
+
+== Обновление значения сенсора ==
+Client -> SH : PATCH /api/v1/sensors/:id/value {Value, Status}
+SH -> DB : UpdateSensorValue(id, Value, Status)
+DB --> SH : success / error
+SH --> Client : 200 OK / 404 Not Found
+
+@enduml

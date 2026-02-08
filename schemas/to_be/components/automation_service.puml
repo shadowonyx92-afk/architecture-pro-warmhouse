@@ -1,0 +1,26 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+Container_Boundary(automationSvc, "Automation Service") {
+    Component(api, "Automation API Controller", "REST Controller", "Принимает запросы от API Gateway")
+    Component(engine, "Automation Engine", "Domain Service", "Логика выполнения сценариев")
+    Component(ruleRepo, "Automation Repository", "Repository", "Хранение сценариев и правил")
+    Component(trigger, "Trigger", "Service", "Запуск сценариев по расписанию и событиям")
+    Component(eventListener, "Event Listener", "Service", "Получение событий и телеметрии от Telemetry Service")
+}
+
+Container_Ext(apiGateway, "API Gateway")
+Container_Ext(deviceSvc, "Device Management Service")
+Container_Ext(telemetry, "Telemetry Service")
+
+Rel(apiGateway, api, "REST")
+Rel(api, engine, "Calls")
+
+Rel(engine, ruleRepo, "CRUD сценариев")
+Rel(engine, trigger, "Schedules triggers")
+Rel(eventListener, engine, "Sends events / triggers")
+
+Rel(trigger, deviceSvc, "Sends commands to devices")
+Rel(eventListener, telemetry, "Subscribes to telemetry events")
+
+@enduml

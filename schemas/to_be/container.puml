@@ -1,0 +1,47 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+title Smart Home — C4 Container Diagram (TO-BE)
+
+Person(user, "Пользователь", "Управляет умным домом через веб / мобильное приложение")
+
+System_Boundary(saas, "Smart Home SaaS Platform") {
+    Container(api, "API Gateway", "Go (Gin)", "Единая точка входа. Проверка JWT, маршрутизация запросов")
+    Container(auth, "Auth Service", "Go", "Аутентификация пользователей, JWT")
+    Container(device, "Device Management Service", "Go + PostgreSQL", "Регистрация устройств, управление состоянием и командами")
+    Container(telemetry, "Telemetry Service", "Go + Telemetry DB", "Приём, хранение и выдача телеметрии устройств")
+    Container(automation, "Automation Service", "Go", "Сценарии, правила, автоматическое управление")
+    ContainerDb(deviceDb, "DeviceDB", "Конфигурация устройств")
+    ContainerDb(automationDB, "AutomationDB", "Конфигурация сценариев")
+    ContainerDb(telemetryDB, "Telemetry DB", "Телеметрия устройств")
+    System_Ext(partners, "Partner Devices", "External systems", "Датчики разных производителей")
+}
+
+' Пользователь
+Rel(user, api, "Использует", "HTTPS")
+
+' Аутентификация
+Rel(api, auth, "Проверка JWT", "HTTPS")
+
+' Прямое управление устройствами
+Rel(api, device, "CRUD устройств, команды", "HTTPS/REST")
+
+' Управление сценариями
+Rel(api, automation, "CRUD сценариев", "HTTPS/REST")
+Rel(telemetry, automation, "События для автоматизации")
+
+' Исполнение сценариев
+Rel(automation, device, "Управление устройствами", "REST / gRPC")
+
+' Телеметрия
+Rel(device, telemetry, "Передача показаний", "MQTT / WebSocket")
+Rel(telemetry, telemetryDB, "Сохранение телеметрии", "TSDB")
+
+' Хранилища
+Rel(device, deviceDb, "Конфигурация устройств", "SQL")
+Rel(automation, automationDB, "Сценарии и правила", "SQL")
+
+' Внешние реализации сервисов
+Rel(device, partners, "Получение данных от внешних сервисов", "HTTP / MQTT")
+
+@enduml
