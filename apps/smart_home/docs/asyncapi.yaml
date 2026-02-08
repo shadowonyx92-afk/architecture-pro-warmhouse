@@ -1,0 +1,40 @@
+asyncapi: 2.6.0
+info:
+  title: Smart Home Async API
+  version: 1.0.0
+  description: AsyncAPI for telemetry and automation events
+
+channels:
+  telemetry.device:
+    publish:
+      summary: Device publishes telemetry
+      message:
+        payload:
+          type: object
+          properties:
+            deviceId:
+              type: string
+            value:
+              type: number
+            status:
+              type: string
+            timestamp:
+              type: string
+              format: date-time
+
+  automation.trigger:
+    publish:
+      summary: Telemetry triggers automation rule
+      message:
+        payload:
+          type: object
+          properties:
+            ruleId:
+              type: string
+            deviceId:
+              type: string
+            value:
+              type: number
+            triggeredAt:
+              type: string
+              format: date-time
