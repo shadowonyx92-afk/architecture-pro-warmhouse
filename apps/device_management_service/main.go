@@ -1,89 +1,128 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
+	"context"
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 
+	"device_management_service/db"
 	"device_management_service/models"
 
 	"github.com/gin-gonic/gin"
 )
 
-var devices = []models.Device{
-	{ID: "1", Name: "Temperature Sensor 1", Type: models.Temperature, Status: "active", Value: 0},
-	// Можно добавить Light и Gate позже
+// DeviceHandler handles device-related requests
+type DeviceHandler struct {
+	DB *db.DB
+}
+
+// NewDeviceHandler creates a new handler
+func NewDeviceHandler(database *db.DB) *DeviceHandler {
+	return &DeviceHandler{DB: database}
+}
+
+// RegisterRoutes registers the device routes
+func (h *DeviceHandler) RegisterRoutes(router *gin.RouterGroup) {
+	devices := router.Group("/devices")
+	{
+		devices.GET("", h.GetDevices)
+		devices.GET("/:id", h.GetDeviceByID)
+		devices.POST("/:id/command", h.UpdateDeviceValue)
+		devices.DELETE("/:id", h.DeleteDevice)
+		devices.POST("", h.CreateDevice)
+	}
 }
 
 func main() {
-	telemetryURL := os.Getenv("TELEMETRY_SERVICE_URL")
-	if telemetryURL == "" {
-		log.Fatal("TELEMETRY_SERVICE_URL not set")
+	dbURL := os.Getenv("DATABASE_URL")
+	database, err := db.New(dbURL)
+	if err != nil {
+		log.Fatalf("failed to connect to DB: %v", err)
 	}
+	defer database.Close()
 
-	router := gin.Default()
+	r := gin.Default()
+	handler := NewDeviceHandler(database)
 
-	router.GET("/devices", func(c *gin.Context) {
-		c.JSON(http.StatusOK, devices)
-	})
+	api := r.Group("/api/v1")
+	handler.RegisterRoutes(api)
 
-	router.GET("/devices/:id", func(c *gin.Context) {
-		id := c.Param("id")
-		for _, d := range devices {
-			if d.ID == id {
-				c.JSON(http.StatusOK, d)
-				return
-			}
-		}
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8090"
+	}
+	r.Run(":" + port)
+}
+
+// GetDevices handles GET /devices
+func (h *DeviceHandler) GetDevices(c *gin.Context) {
+	devices, err := h.DB.GetDevices(context.Background())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, devices)
+}
+
+// GetDeviceByID handles GET /devices/:id
+func (h *DeviceHandler) GetDeviceByID(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	device, err := h.DB.GetDeviceByID(context.Background(), id)
+	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Device not found"})
-	})
-
-	router.POST("/devices/:id/command", func(c *gin.Context) {
-		id := c.Param("id")
-		var cmd models.DeviceCommand
-		if err := c.ShouldBindJSON(&cmd); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
-		}
-
-		var device *models.Device
-		for i := range devices {
-			if devices[i].ID == id {
-				device = &devices[i]
-				break
-			}
-		}
-		if device == nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Device not found"})
-			return
-		}
-
-		// Обрабатываем команду только для Temperature для MVP
-		if device.Type == models.Temperature && cmd.Value != nil {
-			device.Value = *cmd.Value
-			device.Status = "active"
-		}
-
-		// Отправка события в Telemetry Service
-		event := map[string]interface{}{
-			"device_id": device.ID,
-			"type":      device.Type,
-			"value":     device.Value,
-			"status":    device.Status,
-		}
-		payload, _ := json.Marshal(event)
-		_, err := http.Post(telemetryURL+"/telemetry", "application/json", bytes.NewBuffer(payload))
-		if err != nil {
-			log.Printf("Failed to send telemetry: %v", err)
-		}
-
-		c.JSON(http.StatusOK, device)
-	})
-
-	log.Println("Device Management Service running on :8090")
-	if err := router.Run(":8090"); err != nil {
-		log.Fatal(err)
+		return
 	}
+	c.JSON(http.StatusOK, device)
+}
+
+// UpdateDeviceValue handles POST /devices/:id/command
+func (h *DeviceHandler) UpdateDeviceValue(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+
+	var req struct {
+		Value  *float64 `json:"value"`
+		Status *string  `json:"status"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	err := h.DB.UpdateDeviceValue(context.Background(), id, req.Value, req.Status)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Device updated successfully"})
+}
+
+// DeleteDevice handles DELETE /devices/:id
+func (h *DeviceHandler) DeleteDevice(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	err := h.DB.DeleteDevice(context.Background(), id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "Device deleted successfully"})
+}
+
+func (h *DeviceHandler) CreateDevice(c *gin.Context) {
+	var req models.DeviceCreate
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	device, err := h.DB.CreateDevice(context.Background(), req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, device)
 }

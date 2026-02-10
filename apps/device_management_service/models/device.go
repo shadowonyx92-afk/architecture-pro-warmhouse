@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 type DeviceType string
 
 const (
@@ -8,15 +10,27 @@ const (
 	Gate        DeviceType = "gate"
 )
 
+// Device представляет устройство в умном доме
 type Device struct {
-	ID     string     `json:"id"`
-	Name   string     `json:"name"`
-	Type   DeviceType `json:"type"`
-	Status string     `json:"status"`
-	Value  float64    `json:"value,omitempty"` // для температуры
+	ID          int        `json:"id"`
+	Name        string     `json:"name"`
+	Type        DeviceType `json:"type"`
+	Location    string     `json:"location"`
+	Value       *float64   `json:"value,omitempty"`
+	Unit        *string    `json:"unit,omitempty"`
+	Status      *string    `json:"status,omitempty"`
+	LastUpdated *time.Time `json:"last_updated,omitempty"`
+	CreatedAt   *time.Time `json:"created_at,omitempty"`
 }
 
 type DeviceCommand struct {
 	Command string   `json:"command"`         // "toggle", "open", "close"
 	Value   *float64 `json:"value,omitempty"` // для установки значения, если нужно
+}
+
+type DeviceCreate struct {
+	Name     string  `json:"name" binding:"required"`
+	Type     string  `json:"type" binding:"required"`
+	Location *string `json:"location"`
+	Unit     *string `json:"unit"`
 }

@@ -10,6 +10,7 @@ services:
       POSTGRES_DB: smarthome
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./device_management_service/db/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -19,7 +20,7 @@ services:
 
   monolith:
     build:
-      context: ./apps/monolith
+      context: ./monolith
       dockerfile: Dockerfile
     container_name: smarthome-monolith
     depends_on:
@@ -40,7 +41,7 @@ services:
 
   device_management_service:
     build:
-      context: ./apps/device_management_service
+      context: ./device_management_service
       dockerfile: Dockerfile
     container_name: device-management-service
     depends_on:
@@ -65,7 +66,7 @@ services:
 
   telemetry_service:
     build:
-      context: ./apps/telemetry_service
+      context: ./telemetry_service
       dockerfile: Dockerfile
     container_name: telemetry-service
     depends_on:
@@ -80,7 +81,7 @@ services:
 
   temperature_device:
     build:
-      context: ./apps/temperature_device
+      context: ./temperature_device
       dockerfile: Dockerfile
     container_name: temperature-device
     ports:
@@ -90,7 +91,7 @@ services:
 
   light_device:
     build:
-      context: ./apps/light_device
+      context: ./light_device
       dockerfile: Dockerfile
     container_name: light-device
     ports:
@@ -100,7 +101,7 @@ services:
 
   gate_device:
     build:
-      context: ./apps/gate_device
+      context: ./gate_device
       dockerfile: Dockerfile
     container_name: gate-device
     ports:
