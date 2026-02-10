@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"device_management_service/models"
@@ -107,14 +108,32 @@ func (db *DB) GetDeviceByID(ctx context.Context, id int) (models.Device, error) 
 }
 
 // UpdateDeviceValue обновляет значение и статус устройства
-func (db *DB) UpdateDeviceValue(ctx context.Context, id int, value *float64, status *string) error {
-	query := `
-		UPDATE devices
-		SET value = $1, status = $2, last_updated = $3
-		WHERE id = $4
-	`
+func (db *DB) UpdateDeviceValue(ctx context.Context, id int, value *string, status *string) error {
+	// Динамически формируем SET только для тех полей, которые не nil
+	setParts := []string{"last_updated = $1"} // last_updated всегда обновляем
+	params := []interface{}{time.Now()}
+	paramIdx := 2
 
-	result, err := db.Pool.Exec(ctx, query, value, status, time.Now(), id)
+	if value != nil {
+		setParts = append(setParts, fmt.Sprintf("value = $%d", paramIdx))
+		params = append(params, *value)
+		paramIdx++
+	}
+
+	if status != nil {
+		setParts = append(setParts, fmt.Sprintf("status = $%d", paramIdx))
+		params = append(params, *status)
+		paramIdx++
+	}
+
+	query := fmt.Sprintf(
+		"UPDATE devices SET %s WHERE id = $%d",
+		strings.Join(setParts, ", "),
+		paramIdx,
+	)
+	params = append(params, id)
+
+	result, err := db.Pool.Exec(ctx, query, params...)
 	if err != nil {
 		return fmt.Errorf("error updating device value: %w", err)
 	}
@@ -123,6 +142,7 @@ func (db *DB) UpdateDeviceValue(ctx context.Context, id int, value *float64, sta
 		return errors.New("device not found")
 	}
 
+	fmt.Println("Updated Device Value", result, id, value, status)
 	return nil
 }
 
@@ -146,8 +166,8 @@ func (db *DB) DeleteDevice(ctx context.Context, id int) error {
 // Creaete
 func (db *DB) CreateDevice(ctx context.Context, d models.DeviceCreate) (models.Device, error) {
 	query := `
-		INSERT INTO devices (name, type, location, unit, created_at, last_updated)
-		VALUES ($1, $2, $3, $4, NOW(), NOW())
+		INSERT INTO devices (name, type, location, unit, value, status, created_at, last_updated)
+		VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
 		RETURNING id, name, type, location, value, unit, status, last_updated, created_at
 	`
 
@@ -159,6 +179,8 @@ func (db *DB) CreateDevice(ctx context.Context, d models.DeviceCreate) (models.D
 		d.Type,
 		d.Location,
 		d.Unit,
+		d.Value,
+		d.Status,
 	).Scan(
 		&device.ID,
 		&device.Name,

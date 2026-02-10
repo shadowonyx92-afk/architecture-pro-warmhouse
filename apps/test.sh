@@ -1,89 +1,108 @@
 #!/bin/bash
 
-BASE_URL="http://localhost:8090/api/v1"
-HEADER="Content-Type: application/json"
+set -e
 
-echo "=== 1. Получаем список устройств ==="
-DEVICES_JSON=$(curl -s "$BASE_URL/devices")
-echo "$DEVICES_JSON" | jq || echo "$DEVICES_JSON"
+API_URL="http://localhost:8090/api/v1"
 
+# echo "Очищаем таблицу devices..."
+# psql "$DB_URL" -c "TRUNCATE TABLE devices RESTART IDENTITY CASCADE;"
+# echo "База очищена."
+
+echo "Добавляем тестовые устройства..."
+
+# Temperature Device
+curl -s -X POST "$API_URL/devices" \
+    -H "Content-Type: application/json" \
+    -d '{
+        "name": "Temperature Sensor",
+        "type": "temperature",
+        "location": "Living Room",
+        "value": "33.5",
+        "unit": "C",
+        "status": "active"
+    }' | jq
 echo
-echo "=== 2. Удаляем все существующие устройства ==="
 
-IDS=$(echo "$DEVICES_JSON" | jq -r '.[].id' 2>/dev/null)
+# Light Device
+curl -s -X POST "$API_URL/devices" \
+    -H "Content-Type: application/json" \
+    -d '{
+        "name": "Light",
+        "type": "light",
+        "location": "Bedroom",
+        "unit": "lux",
+        "status": "OFF"
+    }' | jq
+echo
 
-if [ -z "$IDS" ]; then
-  echo "Нет устройств для удаления"
-else
-  for ID in $IDS; do
-    echo "Deleting device $ID"
-    curl -s -X DELETE "$BASE_URL/devices/$ID" | jq
-  done
+# Gate Device
+curl -s -X POST "$API_URL/devices" \
+    -H "Content-Type: application/json" \
+    -d '{
+        "name": "Gate",
+        "type": "gate",
+        "location": "Garage",
+        "status": "closed"
+    }' | jq
+echo
+
+echo "Устройства добавлены."
+
+echo "Проверяем список устройств через DMS:"
+curl -s "$API_URL/devices" | jq
+echo
+
+# ==============================
+# Изменение значений
+# ==============================
+
+echo "Изменяем значение температуры и статус света..."
+
+# Получаем ID устройств
+TEMP_ID=$(curl -s "$API_URL/devices" | jq -r '.[] | select(.name=="Temperature Sensor") | .id')
+LIGHT_ID=$(curl -s "$API_URL/devices" | jq -r '.[] | select(.name=="Light") | .id')
+
+echo "TEMP_ID: $TEMP_ID"
+echo "LIGHT_ID: $LIGHT_ID"
+
+# Изменяем температуру на 25.0
+if [[ -n "$TEMP_ID" ]]; then
+  echo "Обновляем температуру до 25.0°C"
+  curl -s -X POST "$API_URL/devices/$TEMP_ID/command?isTest=true" \
+      -H "Content-Type: application/json" \
+      -d '{"value":"25.0"}' | jq
 fi
 
+# Включаем свет
+if [[ -n "$LIGHT_ID" ]]; then
+  echo "Включаем свет"
+  curl -s -X POST "$API_URL/devices/$LIGHT_ID/command?isTest=true" \
+      -H "Content-Type: application/json" \
+      -d '{"status":"ON"}' | jq
+fi
+
+echo "Проверяем изменения:"
+curl -s "$API_URL/devices" | jq
 echo
-echo "=== 3. Проверяем, что список пуст ==="
-curl -s "$BASE_URL/devices" | jq
 
-echo
-echo "=== 4. Создаём устройства ==="
+# ==============================
+# Удаление тестовых устройств
+# ==============================
 
-TEMP=$(curl -s -X POST "$BASE_URL/devices" \
-  -H "$HEADER" \
-  -d '{
-    "name": "Temperature Sensor",
-    "type": "temperature",
-    "location": "kitchen",
-    "unit": "C"
-  }')
-echo "$TEMP" | jq
+echo "Удаляем тестовые устройства..."
 
-LIGHT=$(curl -s -X POST "$BASE_URL/devices" \
-  -H "$HEADER" \
-  -d '{
-    "name": "Living Room Light",
-    "type": "light",
-    "location": "living_room",
-    "unit": "boolean"
-  }')
-echo "$LIGHT" | jq
+# Gate
+GATE_ID=$(curl -s "$API_URL/devices" | jq -r '.[] | select(.name=="Gate") | .id')
 
-GATE=$(curl -s -X POST "$BASE_URL/devices" \
-  -H "$HEADER" \
-  -d '{
-    "name": "Main Gate",
-    "type": "gate",
-    "location": "yard",
-    "unit": "boolean"
-  }')
-echo "$GATE" | jq
-
-echo
-echo "=== 5. Получаем список устройств ==="
-curl -s "$BASE_URL/devices" | jq
-
-echo
-echo "=== 6. Обновляем значения (commands) ==="
-
-curl -s -X POST "$BASE_URL/devices/1/command" \
-  -H "$HEADER" \
-  -d '{"value": 22.5, "status": "active"}' | jq
-
-curl -s -X POST "$BASE_URL/devices/2/command" \
-  -H "$HEADER" \
-  -d '{"value": 1, "status": "on"}' | jq
-
-curl -s -X POST "$BASE_URL/devices/3/command" \
-  -H "$HEADER" \
-  -d '{"value": 0, "status": "closed"}' | jq
-
-echo
-echo "=== 7. Проверяем устройства по ID ==="
-
-for ID in 1 2 3; do
-  echo "--- Device $ID ---"
-  curl -s "$BASE_URL/devices/$ID" | jq
+for ID in "$TEMP_ID" "$LIGHT_ID" "$GATE_ID"; do
+  if [[ -n "$ID" ]]; then
+    curl -s -X DELETE "$API_URL/devices/$ID" | jq
+  fi
 done
 
+echo "Тестовые устройства удалены."
+
+# Проверяем итоговый список
+echo "Итоговый список устройств:"
+curl -s "$API_URL/devices" | jq
 echo
-echo "✅ DONE: Device Management Service REST test finished"

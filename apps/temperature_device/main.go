@@ -9,17 +9,17 @@ import (
 )
 
 type TemperatureDevice struct {
-	ID     string  `json:"id"`
-	Name   string  `json:"name"`
-	Value  float64 `json:"value"`
-	Status string  `json:"status"`
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Value  string `json:"value"`
+	Status string `json:"status"`
 	mu     sync.Mutex
 }
 
 var device = TemperatureDevice{
 	ID:     "1",
 	Name:   "Temperature Sensor 1",
-	Value:  22.5,
+	Value:  "22.5",
 	Status: "active",
 }
 
@@ -47,7 +47,7 @@ func main() {
 		}
 
 		var payload struct {
-			Value float64 `json:"value"`
+			Value string `json:"value"`
 		}
 		if err := c.ShouldBindJSON(&payload); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
