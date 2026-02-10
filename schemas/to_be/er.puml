@@ -1,0 +1,83 @@
+@startuml
+!define TABLE(name,desc) class name as "name\n<desc>" << (T,#FFAAAA) >>
+!define PK(x) <b>x</b>
+!define FK(x) <i>x</i>
+
+title Smart Home — ER Diagram (TO-BE)
+
+' -----------------------------
+' Tables
+' -----------------------------
+TABLE(User, "Пользователь") {
+  PK(id)
+  name
+  email
+  password_hash
+}
+
+TABLE(House, "Дом") {
+  PK(id)
+  FK(user_id)
+  name
+  address
+}
+
+TABLE(DeviceType, "Тип устройства") {
+  PK(id)
+  name
+  description
+}
+
+TABLE(Module, "Модуль / комплект устройств") {
+  PK(id)
+  name
+  description
+}
+
+TABLE(Device, "Устройство") {
+  PK(id)
+  FK(device_type_id)
+  FK(house_id)
+  FK(module_id)
+  serial_number
+  status
+  last_updated
+}
+
+TABLE(Scenario, "Сценарий автоматизации") {
+  PK(id)
+  FK(house_id)
+  name
+  description
+  enabled
+}
+
+TABLE(Action, "Действие сценария") {
+  PK(id)
+  FK(scenario_id)
+  FK(device_id)
+  command
+  payload
+}
+
+TABLE(TelemetryData, "Телеметрия устройства") {
+  PK(id)
+  FK(device_id)
+  type
+  value
+  timestamp
+}
+
+' -----------------------------
+' Relationships
+' -----------------------------
+User "1" --> "0..*" House : owns
+House "1" --> "0..*" Device : contains
+Device "1" --> "1" DeviceType : type
+Module "1" --> "0..*" Device : includes
+House "1" --> "0..*" Scenario : defines
+Scenario "1" --> "0..*" Action : contains
+Device "1" --> "0..*" Action : target
+Device "1" --> "0..*" TelemetryData : generates
+
+@enduml
