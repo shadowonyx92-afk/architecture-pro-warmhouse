@@ -11,6 +11,7 @@ import (
 	"device_management_service/db"
 	"device_management_service/devices_client"
 	"device_management_service/models"
+	"device_management_service/services"
 
 	"github.com/gin-gonic/gin"
 )
@@ -21,6 +22,7 @@ type DeviceHandler struct {
 	TemperatureClient *devices_client.TemperatureClient
 	LightClient       *devices_client.LightClient
 	GateClient        *devices_client.GateClient
+	TelemetryClient   *services.TelemetryClient
 }
 
 // Создание нового DeviceHandler с клиентами
@@ -29,12 +31,14 @@ func NewDeviceHandler(
 	tempClient *devices_client.TemperatureClient,
 	lightClient *devices_client.LightClient,
 	gateClient *devices_client.GateClient,
+	telemetryClient *services.TelemetryClient,
 ) *DeviceHandler {
 	return &DeviceHandler{
 		DB:                database,
 		TemperatureClient: tempClient,
 		LightClient:       lightClient,
 		GateClient:        gateClient,
+		TelemetryClient:   telemetryClient,
 	}
 }
 
@@ -136,44 +140,43 @@ func (h *DeviceHandler) UpdateDeviceValue(c *gin.Context) {
 	isTest := c.Query("isTest") == "true"
 
 	// Отправляем команду на внешнее устройство
-	if isTest {
-		// Обновляем БД для консистентности
-		if err := h.DB.UpdateDeviceValue(context.Background(), id, req.Value, req.Status); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
+	if !isTest {
+		switch device.Type {
+		case models.Temperature:
+			if req.Value != nil {
+				temp, err := strconv.ParseFloat(*req.Value, 64)
+				if err != nil {
+					fmt.Println("Ошибка преобразования температуры:", err)
+					return
+				}
+				if err := h.TemperatureClient.Set(strconv.Itoa(device.ID), temp); err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					return
+				}
+			}
+		case models.Light:
+			if req.Status != nil {
+				if err := h.LightClient.Set(strconv.Itoa(device.ID), *req.Status); err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					return
+				}
+			}
+		case models.Gate:
+			if req.Status != nil {
+				if err := h.GateClient.Set(strconv.Itoa(device.ID), *req.Status); err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+					return
+				}
+			}
 		}
-
-		c.JSON(http.StatusOK, gin.H{"Device updated successfully1": req})
-		return
 	}
 
-	switch device.Type {
-	case models.Temperature:
-		if req.Value != nil {
-			temp, err := strconv.ParseFloat(*req.Value, 64) // 64 означает float64
-			if err != nil {
-				fmt.Println("Ошибка преобразования температуры:", err)
-				return
-			}
-			if err := h.TemperatureClient.Set(strconv.Itoa(device.ID), temp); err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				return
-			}
-		}
-	case models.Light:
-		if req.Status != nil {
-			if err := h.LightClient.Set(strconv.Itoa(device.ID), *req.Status); err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				return
-			}
-		}
-	case models.Gate:
-		if req.Status != nil {
-			if err := h.GateClient.Set(strconv.Itoa(device.ID), *req.Status); err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				return
-			}
-		}
+	if req.Status == nil {
+		req.Status = device.Status
+	}
+
+	if req.Value == nil {
+		req.Value = device.Value
 	}
 
 	// Обновляем БД для консистентности
@@ -182,7 +185,17 @@ func (h *DeviceHandler) UpdateDeviceValue(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"Device updated successfully2": req.Value})
+	event := services.TelemetryEvent{
+		DeviceID: strconv.Itoa(device.ID),
+		Type:     string(device.Type),
+		Value:    req.Value,
+		Status:   req.Status,
+	}
+	if err := h.TelemetryClient.Send(event); err != nil {
+		fmt.Println("Failed to send initial telemetry:", err)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"Device updated successfully": req.Value})
 }
 
 // DeleteDevice — удалить устройство
@@ -226,6 +239,16 @@ func (h *DeviceHandler) CreateDevice(c *gin.Context) {
 		}
 	}
 
+	event := services.TelemetryEvent{
+		DeviceID: strconv.Itoa(device.ID),
+		Type:     string(device.Type),
+		Value:    device.Value,
+		Status:   device.Status,
+	}
+	if err := h.TelemetryClient.Send(event); err != nil {
+		fmt.Println("Failed to send initial telemetry:", err)
+	}
+
 	c.JSON(http.StatusCreated, device)
 }
 
@@ -245,8 +268,9 @@ func main() {
 	tempClient := &devices_client.TemperatureClient{BaseURL: os.Getenv("TEMPERATURE_API_URL")}
 	lightClient := &devices_client.LightClient{BaseURL: os.Getenv("LIGHT_API_URL")}
 	gateClient := &devices_client.GateClient{BaseURL: os.Getenv("GATE_API_URL")}
+	telemetryClient := &services.TelemetryClient{BaseURL: os.Getenv("TELEMETRY_API_URL")}
 
-	handler := NewDeviceHandler(database, tempClient, lightClient, gateClient)
+	handler := NewDeviceHandler(database, tempClient, lightClient, gateClient, telemetryClient)
 
 	r := gin.Default()
 	api := r.Group("/api/v1")

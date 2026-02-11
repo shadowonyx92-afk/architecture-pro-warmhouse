@@ -9,36 +9,38 @@ import (
 )
 
 type TemperatureDevice struct {
-	ID     string `json:"id"`
-	Name   string `json:"name"`
-	Value  string `json:"value"`
-	Status string `json:"status"`
+	ID     string  `json:"id"`
+	Name   string  `json:"name"`
+	Value  float64 `json:"value"`
+	Status string  `json:"status"`
 	mu     sync.Mutex
 }
 
 var device = TemperatureDevice{
 	ID:     "1",
 	Name:   "Temperature Sensor 1",
-	Value:  "22.5",
+	Value:  22.5,
 	Status: "active",
 }
 
 func main() {
 	router := gin.Default()
 
-	// Получить текущее значение
+	// Получить текущее состояние
 	router.GET("/temperature/:id", func(c *gin.Context) {
 		id := c.Param("id")
 		if id != device.ID {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Device not found"})
 			return
 		}
+
 		device.mu.Lock()
 		defer device.mu.Unlock()
+
 		c.JSON(http.StatusOK, device)
 	})
 
-	// Установить значение (для теста команд от Device Management)
+	// Установить температуру (команда)
 	router.POST("/temperature/:id/set", func(c *gin.Context) {
 		id := c.Param("id")
 		if id != device.ID {
@@ -47,7 +49,7 @@ func main() {
 		}
 
 		var payload struct {
-			Value string `json:"value"`
+			Value float64 `json:"value"`
 		}
 		if err := c.ShouldBindJSON(&payload); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

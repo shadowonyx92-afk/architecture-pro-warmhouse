@@ -3,6 +3,7 @@
 set -e
 
 API_URL="http://localhost:8090/api/v1"
+TELEMETRY_URL="http://localhost:8100"
 
 # echo "Очищаем таблицу devices..."
 # psql "$DB_URL" -c "TRUNCATE TABLE devices RESTART IDENTITY CASCADE;"
@@ -84,6 +85,12 @@ fi
 echo "Проверяем изменения:"
 curl -s "$API_URL/devices" | jq
 echo
+
+echo "Проверяем телеметрию для температуры (DeviceID=$TEMP_ID)"
+curl -s "$TELEMETRY_URL/telemetry/$TEMP_ID" | jq .
+
+echo "Проверяем телеметрию для света (DeviceID=$LIGHT_ID)"
+curl -s "$TELEMETRY_URL/telemetry/$LIGHT_ID" | jq .
 
 # ==============================
 # Удаление тестовых устройств
