@@ -8,10 +8,10 @@ import (
 )
 
 type TelemetryEvent struct {
-	DeviceID string  `json:"device_id"`
-	Type     string  `json:"type"`
-	Value    *string `json:"value,omitempty"`
-	Status   *string `json:"status,omitempty"`
+	DeviceID string   `json:"device_id"`
+	Type     string   `json:"type"`
+	Value    *float64 `json:"value,omitempty"`
+	Status   *string  `json:"status,omitempty"`
 }
 
 type TelemetryClient struct {

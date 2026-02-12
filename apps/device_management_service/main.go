@@ -50,6 +50,7 @@ func (h *DeviceHandler) RegisterRoutes(router *gin.RouterGroup) {
 		devices.GET("/:id", h.GetDeviceByID)
 		devices.POST("/:id/command", h.UpdateDeviceValue)
 		devices.DELETE("/:id", h.DeleteDevice)
+		devices.PUT("/:id", h.UpdateDevice)
 		devices.POST("", h.CreateDevice)
 	}
 }
@@ -118,13 +119,75 @@ func (h *DeviceHandler) GetDeviceByID(c *gin.Context) {
 	c.JSON(http.StatusOK, device)
 }
 
+// UpdateDevice — PUT /devices/:id
+func (h *DeviceHandler) UpdateDevice(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid device id"})
+		return
+	}
+
+	var req models.DeviceUpdate
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	device, err := h.DB.GetDeviceByID(context.Background(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "device not found"})
+		return
+	}
+
+	// Обновляем устройство во внешнем сервисе
+	switch device.Type {
+	case models.Temperature:
+		if req.Status != nil {
+			if err := h.TemperatureClient.Set(strconv.Itoa(device.ID), *req.Status); err != nil {
+				c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+				return
+			}
+		}
+	case models.Light:
+		if req.Status != nil {
+			if err := h.LightClient.Set(strconv.Itoa(device.ID), *req.Status); err != nil {
+				c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+				return
+			}
+		}
+	case models.Gate:
+		if req.Status != nil {
+			if err := h.GateClient.Set(strconv.Itoa(device.ID), *req.Status); err != nil {
+				c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+				return
+			}
+		}
+	}
+
+	// Обновляем БД
+	if err := h.DB.UpdateDevice(context.Background(), id, req); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Обновляем объект для ответа
+	if req.Value != nil {
+		device.Value = req.Value
+	}
+	if req.Status != nil {
+		device.Status = req.Status
+	}
+
+	c.JSON(http.StatusOK, device)
+}
+
 // UpdateDeviceValue — POST /devices/:id/command
 func (h *DeviceHandler) UpdateDeviceValue(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 
 	var req struct {
-		Value  *string `json:"value"`
-		Status *string `json:"status"`
+		Value  *float64 `json:"value"`
+		Status *string  `json:"status"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -143,13 +206,8 @@ func (h *DeviceHandler) UpdateDeviceValue(c *gin.Context) {
 	if !isTest {
 		switch device.Type {
 		case models.Temperature:
-			if req.Value != nil {
-				temp, err := strconv.ParseFloat(*req.Value, 64)
-				if err != nil {
-					fmt.Println("Ошибка преобразования температуры:", err)
-					return
-				}
-				if err := h.TemperatureClient.Set(strconv.Itoa(device.ID), temp); err != nil {
+			if req.Status != nil {
+				if err := h.TemperatureClient.Set(strconv.Itoa(device.ID), *req.Status); err != nil {
 					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 					return
 				}

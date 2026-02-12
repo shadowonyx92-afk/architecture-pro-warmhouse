@@ -2,8 +2,10 @@ package main
 
 import (
 	"log"
+	"math/rand"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -27,12 +29,17 @@ func main() {
 	// Получить состояние ворот
 	router.GET("/gate/:id", func(c *gin.Context) {
 		id := c.Param("id")
-		if id != device.ID {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Device not found"})
-			return
+
+		statuses := []string{"closed", "opened"}
+		rand.Seed(time.Now().UnixNano())
+		randomIndex := rand.Intn(len(statuses))
+
+		device := GateDevice{
+			ID:     id,
+			Name:   "Main Gate",
+			Status: statuses[randomIndex],
 		}
-		device.mu.Lock()
-		defer device.mu.Unlock()
+
 		c.JSON(http.StatusOK, device)
 	})
 

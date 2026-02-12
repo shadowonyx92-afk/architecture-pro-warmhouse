@@ -16,7 +16,7 @@ type Device struct {
 	Name        string     `json:"name"`
 	Type        DeviceType `json:"type"`
 	Location    string     `json:"location"`
-	Value       *string    `json:"value,omitempty"`
+	Value       *float64   `json:"value,omitempty"`
 	Unit        *string    `json:"unit,omitempty"`
 	Status      *string    `json:"status,omitempty"`
 	LastUpdated *time.Time `json:"last_updated,omitempty"`
@@ -24,15 +24,23 @@ type Device struct {
 }
 
 type DeviceCommand struct {
-	Command string  `json:"command"`
-	Value   *string `json:"value,omitempty"` // для установки значения, если нужно
+	Command string   `json:"command"`
+	Value   *float64 `json:"value,omitempty"` // для установки значения, если нужно
 }
 
 type DeviceCreate struct {
-	Name     string  `json:"name" binding:"required"`
-	Type     string  `json:"type" binding:"required"`
-	Location *string `json:"location"`
-	Unit     *string `json:"unit"`
-	Value    *string `json:"value"`
-	Status   *string `json:"status"`
+	Name     string   `json:"name" binding:"required"`
+	Type     string   `json:"type" binding:"required"`
+	Location *string  `json:"location"`
+	Unit     *string  `json:"unit"`
+	Value    *float64 `json:"value"`
+	Status   *string  `json:"status"`
+}
+
+type DeviceUpdate struct {
+	Name     *string  `json:"name"`
+	Location *string  `json:"location"`
+	Unit     *string  `json:"unit"`
+	Value    *float64 `json:"value"`
+	Status   *string  `json:"status"`
 }

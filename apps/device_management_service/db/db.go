@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -107,8 +108,70 @@ func (db *DB) GetDeviceByID(ctx context.Context, id int) (models.Device, error) 
 	return d, nil
 }
 
+// UpdateDevice обновляет все переданные поля устройства
+func (db *DB) UpdateDevice(ctx context.Context, id int, upd models.DeviceUpdate) error {
+	setParts := []string{"last_updated = NOW()"}
+	args := []interface{}{}
+	argIdx := 1
+
+	if upd.Name != nil {
+		setParts = append(setParts, fmt.Sprintf("name = $%d", argIdx))
+		args = append(args, *upd.Name)
+		argIdx++
+	}
+
+	if upd.Location != nil {
+		setParts = append(setParts, fmt.Sprintf("location = $%d", argIdx))
+		args = append(args, *upd.Location)
+		argIdx++
+	}
+
+	if upd.Unit != nil {
+		setParts = append(setParts, fmt.Sprintf("unit = $%d", argIdx))
+		args = append(args, *upd.Unit)
+		argIdx++
+	}
+
+	if upd.Value != nil {
+		setParts = append(setParts, fmt.Sprintf("value = $%d", argIdx))
+		args = append(args, *upd.Value)
+		argIdx++
+	}
+
+	if upd.Status != nil {
+		setParts = append(setParts, fmt.Sprintf("status = $%d", argIdx))
+		args = append(args, *upd.Status)
+		argIdx++
+	}
+
+	if len(setParts) == 1 {
+		return errors.New("no fields to update")
+	}
+
+	query := fmt.Sprintf(
+		"UPDATE devices SET %s WHERE id = $%d",
+		strings.Join(setParts, ", "),
+		argIdx,
+	)
+
+	args = append(args, id)
+
+	res, err := db.Pool.Exec(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("error updating device: %w", err)
+	}
+
+	if res.RowsAffected() == 0 {
+		return errors.New("device not found")
+	}
+
+	log.Printf("фывфыв %+v\n", upd)
+
+	return nil
+}
+
 // UpdateDeviceValue обновляет значение и статус устройства
-func (db *DB) UpdateDeviceValue(ctx context.Context, id int, value *string, status *string) error {
+func (db *DB) UpdateDeviceValue(ctx context.Context, id int, value *float64, status *string) error {
 	// Динамически формируем SET только для тех полей, которые не nil
 	setParts := []string{"last_updated = $1"} // last_updated всегда обновляем
 	params := []interface{}{time.Now()}

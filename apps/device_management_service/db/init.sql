@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS devices (
     name TEXT NOT NULL,
     type TEXT NOT NULL,
     location TEXT,
-    value TEXT DEFAULT NULL,
+    value FLOAT DEFAULT 0,
     unit TEXT,
     status TEXT,
     last_updated TIMESTAMP DEFAULT now(),
