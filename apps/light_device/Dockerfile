@@ -1,16 +1,16 @@
-FROM golang:1.22-alpine AS builder
+FROM ruby:3.2-alpine
 
 WORKDIR /app
-COPY go.mod go.sum ./
-RUN go mod download
-COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o light_device
 
-FROM alpine:latest
-RUN apk --no-cache add ca-certificates tzdata
-WORKDIR /app
-COPY --from=builder /app/light_device .
+RUN apk add --no-cache build-base tzdata
 
-EXPOSE 8082
+# Устанавливаем нужные гемы
+RUN gem install sinatra puma json
 
-CMD ["./light_device"]
+COPY light_device.rb .
+COPY config.ru .
+
+EXPOSE 8085
+
+# Запуск через puma и rackup
+CMD ["puma", "-b", "tcp://0.0.0.0:8085", "config.ru"]

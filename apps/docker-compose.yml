@@ -34,7 +34,7 @@ services:
       - DATABASE_URL=postgres://postgres:postgres@postgres:5432/smarthome
       - TEMPERATURE_API_URL=http://temperature_device:8081
       - TEMPERATURE_API_OLD_URL=http://temperature-api:8088
-      - LIGHT_API_URL=http://light_device:8082
+      - LIGHT_API_URL=http://light_device:8085
       - GATE_API_URL=http://gate_device:8083
       - DEVICE_SERVICE_URL=http://device_management_service:8090
     ports:
@@ -59,7 +59,7 @@ services:
     environment:
       - DATABASE_URL=postgres://postgres:postgres@postgres:5432/smarthome
       - TEMPERATURE_API_URL=http://temperature_device:8081
-      - LIGHT_API_URL=http://light_device:8082
+      - LIGHT_API_URL=http://light_device:8085
       - GATE_API_URL=http://gate_device:8083
       - TELEMETRY_API_URL=http://telemetry_service:8100
     ports:
@@ -98,7 +98,7 @@ services:
       dockerfile: Dockerfile
     container_name: light-device
     ports:
-      - "8082:8082"
+      - "8085:8085"
     networks:
       - smarthome-network
 
