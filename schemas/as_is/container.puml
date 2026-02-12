@@ -1,0 +1,19 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+title Smart Home — C4 Container Diagram (AS-IS)
+
+Person(user, "Пользователь", "Управляет умным домом, просматривает данные")
+
+System_Boundary(smartHome, "Smart Home Monolith") {
+    Container(apiServer, "SmartHome API Server", "Go (Gin)", "Предоставляет REST API для сенсоров и работы с температурой") 
+    ContainerDb(db, "PostgreSQL Database", "PostgreSQL", "Хранит данные о сенсорах и их состоянии")
+}
+
+Container_Ext(temperatureAPI, "Temperature API", "HTTP Service", "Внешний сервис для получения актуальной температуры")
+
+Rel(user, apiServer, "Использует", "HTTP/JSON")
+Rel(apiServer, db, "Читает/записывает данные сенсоров", "SQL")
+Rel(apiServer, temperatureAPI, "Получает актуальную температуру для сенсоров", "HTTP/JSON")
+
+@enduml

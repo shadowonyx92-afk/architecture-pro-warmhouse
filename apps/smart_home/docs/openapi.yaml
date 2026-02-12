@@ -1,0 +1,87 @@
+openapi: 3.0.3
+info:
+  title: Smart Home API
+  version: 1.0.0
+  description: REST API for Device Management and Telemetry services
+
+paths:
+  /devices:
+    post:
+      summary: Register new device
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceCreate'
+      responses:
+        '201':
+          description: Device created
+
+  /devices/{deviceId}/commands:
+    post:
+      summary: Send command to device
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceCommand'
+      responses:
+        '200':
+          description: Command accepted
+
+  /telemetry/{deviceId}:
+    get:
+      summary: Get device telemetry
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Telemetry data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Telemetry'
+
+components:
+  schemas:
+    DeviceCreate:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [TEMPERATURE, LIGHT, GATE]
+        location:
+          type: string
+
+    DeviceCommand:
+      type: object
+      properties:
+        command:
+          type: string
+          example: TURN_ON
+
+    Telemetry:
+      type: object
+      properties:
+        deviceId:
+          type: string
+        value:
+          type: number
+        status:
+          type: string
+        timestamp:
+          type: string
+          format: date-time

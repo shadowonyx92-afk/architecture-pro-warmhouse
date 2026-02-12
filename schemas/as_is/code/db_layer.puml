@@ -1,0 +1,46 @@
+@startuml
+title UML Диаграмма классов — Models и DB Layer (AS IS)
+
+class Sensor {
+    +ID: int
+    +Name: string
+    +Type: SensorType
+    +Location: string
+    +Value: float64
+    +Unit: string
+    +Status: string
+    +LastUpdated: time.Time
+    +CreatedAt: time.Time
+}
+
+class SensorCreate {
+    +Name: string
+    +Type: SensorType
+    +Location: string
+    +Unit: string
+}
+
+class SensorUpdate {
+    +Name: string
+    +Type: SensorType
+    +Location: string
+    +Value: *float64
+    +Unit: string
+    +Status: string
+}
+
+class DB {
+    +Pool: pgxpool.Pool
+    +GetSensors(ctx context.Context): []Sensor
+    +GetSensorByID(ctx context.Context, id int): Sensor
+    +CreateSensor(ctx context.Context, s SensorCreate): Sensor
+    +UpdateSensor(ctx context.Context, id int, s SensorUpdate): Sensor
+    +DeleteSensor(ctx context.Context, id int): error
+    +UpdateSensorValue(ctx context.Context, id int, value float64, status string): error
+}
+
+DB --> Sensor : возвращает / обновляет
+DB --> SensorCreate : принимает
+DB --> SensorUpdate : принимает
+
+@enduml

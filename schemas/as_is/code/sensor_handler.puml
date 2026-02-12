@@ -1,0 +1,25 @@
+@startuml
+title UML Диаграмма классов — SensorHandler и TemperatureService
+
+class SensorHandler {
+    +DB: *DB
+    +TemperatureService: *TemperatureService
+    +GetSensors(ctx)
+    +GetSensorByID(ctx, id)
+    +CreateSensor(ctx, s SensorCreate)
+    +UpdateSensor(ctx, id, s SensorUpdate)
+    +DeleteSensor(ctx, id)
+    +UpdateSensorValue(ctx, id, value, status)
+    +GetTemperatureByLocation(location)
+}
+
+class TemperatureService {
+    +BaseURL: string
+    +HTTPClient: *http.Client
+    +GetTemperature(location): TemperatureResponse
+    +GetTemperatureByID(sensorID): TemperatureResponse
+}
+
+SensorHandler --> DB : использует для CRUD
+SensorHandler --> TemperatureService : использует для получения актуальной температуры
+@enduml

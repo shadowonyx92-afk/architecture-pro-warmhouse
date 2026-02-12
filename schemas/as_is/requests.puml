@@ -1,0 +1,50 @@
+@startuml
+actor Client as "Клиент (UI/API)"
+
+participant "SmartHome API Server\n(main.go + handlers + db)" as APIServer
+database "PostgreSQL\nsensors" as DB
+participant "Temperature API\n(External Service)" as TempAPI
+
+== Получение всех сенсоров ==
+Client -> APIServer : GET /api/v1/sensors
+APIServer -> DB : GetSensors() (SELECT * FROM sensors)
+DB --> APIServer : список сенсоров
+APIServer -> TempAPI : GetTemperatureByID(sensorID) если сенсор типа temperature
+TempAPI --> APIServer : актуальные значения температуры
+APIServer --> Client : JSON список сенсоров
+
+== Получение сенсора по ID ==
+Client -> APIServer : GET /api/v1/sensors/:id
+APIServer -> DB : GetSensorByID(id)
+DB --> APIServer : сенсор
+APIServer -> TempAPI : GetTemperatureByID(sensorID) если сенсор типа temperature
+TempAPI --> APIServer : актуальные значения температуры
+APIServer --> Client : JSON сенсор с обновлёнными значениями
+
+== Получение температуры по локации ==
+Client -> APIServer : GET /api/v1/sensors/temperature/:location
+APIServer -> TempAPI : GetTemperature(location)
+TempAPI --> APIServer : актуальные значения температуры
+APIServer --> Client : JSON температура для локации
+
+== Создание / обновление / удаление сенсора ==
+Client -> APIServer : POST /api/v1/sensors (CreateSensor)
+APIServer -> DB : INSERT сенсор
+DB --> APIServer : новый сенсор
+APIServer --> Client : JSON нового сенсора
+
+Client -> APIServer : PUT /api/v1/sensors/:id (UpdateSensor)
+APIServer -> DB : UPDATE сенсор
+DB --> APIServer : обновлённый сенсор
+APIServer --> Client : JSON обновлённого сенсора
+
+Client -> APIServer : DELETE /api/v1/sensors/:id (DeleteSensor)
+APIServer -> DB : DELETE сенсор
+DB --> APIServer : RowsAffected
+APIServer --> Client : статус удаления
+
+Client -> APIServer : PATCH /api/v1/sensors/:id/value (UpdateSensorValue)
+APIServer -> DB : UPDATE value, status, last_updated
+DB --> APIServer : RowsAffected
+APIServer --> Client : статус обновления
+@enduml

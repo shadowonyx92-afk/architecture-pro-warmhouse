@@ -4,27 +4,120 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: smarthome-postgres
-  ## тут нужно добавить настройки
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: smarthome
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./device_management_service/db/init.sql:/docker-entrypoint-initdb.d/dms_init.sql
+      - ./telemetry_service/db/init.sql:/docker-entrypoint-initdb.d/telemetry_init.sql
+      - ./monolith/db/init.sql:/docker-entrypoint-initdb.d/monolith_init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 5
+    networks:
+      - smarthome-network
 
-  temperature-api:
-  ## тут нужно добавить приложение
-
-  app:
+  monolith:
     build:
-      context: ./smart_home
+      context: ./monolith
       dockerfile: Dockerfile
-    container_name: smarthome-app
+    container_name: smarthome-monolith
     depends_on:
       postgres:
         condition: service_healthy
-      temperature-api:
+      device_management_service:
         condition: service_started
     environment:
       - DATABASE_URL=postgres://postgres:postgres@postgres:5432/smarthome
-      - TEMPERATURE_API_URL=http://temperature-api:8081
+      - TEMPERATURE_API_URL=http://temperature_device:8081
+      - TEMPERATURE_API_OLD_URL=http://temperature-api:8088
+      - LIGHT_API_URL=http://light_device:8085
+      - GATE_API_URL=http://gate_device:8083
+      - DEVICE_SERVICE_URL=http://device_management_service:8090
     ports:
       - "8080:8080"
-    restart: unless-stopped
+    networks:
+      - smarthome-network
+
+  device_management_service:
+    build:
+      context: ./device_management_service
+      dockerfile: Dockerfile
+    container_name: device-management-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+      temperature_device:
+        condition: service_started
+      light_device:
+        condition: service_started
+      gate_device:
+        condition: service_started
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/smarthome
+      - TEMPERATURE_API_URL=http://temperature_device:8081
+      - LIGHT_API_URL=http://light_device:8085
+      - GATE_API_URL=http://gate_device:8083
+      - TELEMETRY_API_URL=http://telemetry_service:8100
+    ports:
+      - "8090:8090"
+    networks:
+      - smarthome-network
+
+  telemetry_service:
+    build:
+      context: ./telemetry_service
+      dockerfile: Dockerfile
+    container_name: telemetry-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/smarthome
+    ports:
+      - "8100:8100"
+    networks:
+      - smarthome-network
+
+  temperature_device:
+    build:
+      context: ./temperature_device
+      dockerfile: Dockerfile
+    container_name: temperature-device
+    ports:
+      - "8081:8081"
+    networks:
+      - smarthome-network
+
+  light_device:
+    build:
+      context: ./light_device
+      dockerfile: Dockerfile
+    container_name: light-device
+    ports:
+      - "8085:8085"
+    networks:
+      - smarthome-network
+
+  gate_device:
+    build:
+      context: ./gate_device
+      dockerfile: Dockerfile
+    container_name: gate-device
+    ports:
+      - "8083:8083"
+    networks:
+      - smarthome-network
+  temperature-api:
+    container_name: temperature-app
+    build:
+      context: ./temperature_api
+      dockerfile: Dockerfile
+    ports:
+      - "8088:8088"
     networks:
       - smarthome-network
 
