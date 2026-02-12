@@ -17,11 +17,23 @@ type Sensor struct {
 	Name        string     `json:"name"`
 	Type        SensorType `json:"type"`
 	Location    string     `json:"location"`
-	Value       float64    `json:"value"`
+	Value       *float64   `json:"value"`
 	Unit        string     `json:"unit"`
-	Status      string     `json:"status"`
+	Status      *string    `json:"status"`
 	LastUpdated time.Time  `json:"last_updated"`
 	CreatedAt   time.Time  `json:"created_at"`
+}
+
+type Device struct {
+	ID          int       `json:"id"`
+	Name        string    `json:"name"`
+	Type        string    `json:"type"`
+	Location    string    `json:"location"`
+	Value       float64   `json:"value"`
+	Unit        string    `json:"unit"`
+	Status      string    `json:"status"`
+	LastUpdated time.Time `json:"last_updated"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 // SensorCreate represents the data needed to create a new sensor

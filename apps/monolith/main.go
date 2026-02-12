@@ -28,9 +28,13 @@ func main() {
 	log.Println("Connected to database successfully")
 
 	// Initialize temperature service
-	temperatureAPIURL := getEnv("TEMPERATURE_API_URL", "http://temperature-api:8081")
+	temperatureAPIURL := getEnv("TEMPERATURE_API_OLD_URL", "http://temperature-api:8088")
 	temperatureService := services.NewTemperatureService(temperatureAPIURL)
 	log.Printf("Temperature service initialized with API URL: %s\n", temperatureAPIURL)
+
+	deviceMgmtURL := getEnv("DEVICE_SERVICE_URL", "http://device-management-service:8090")
+	deviceMgmtClient := services.NewDeviceManagementClient(deviceMgmtURL)
+	log.Printf("Device Management client initialized with API URL: %s\n", deviceMgmtURL)
 
 	// Initialize router
 	router := gin.Default()
@@ -46,7 +50,7 @@ func main() {
 	apiRoutes := router.Group("/api/v1")
 
 	// Register sensor routes
-	sensorHandler := handlers.NewSensorHandler(database, temperatureService)
+	sensorHandler := handlers.NewSensorHandler(database, temperatureService, deviceMgmtClient)
 	sensorHandler.RegisterRoutes(apiRoutes)
 
 	// Start server
