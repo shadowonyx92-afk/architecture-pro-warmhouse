@@ -1,0 +1,36 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+title Smart Home — C4 Container Diagram (TO-BE)
+
+Person(user, "Пользователь", "Управляет умным домом через веб / мобильное приложение")
+
+System_Boundary(saas, "Smart Home SaaS Platform") {
+    Container(apiServer, "SmartHome API Server", "Go (Gin)", "Предоставляет REST API для сенсоров и работы с температурой") 
+    Container(device, "Device Management Service", "Go + PostgreSQL", "Регистрация устройств, управление состоянием и командами")
+    Container(telemetry, "Telemetry Service", "Go + Telemetry DB", "Приём, хранение и выдача телеметрии устройств")
+    ContainerDb(db, "DataBase", "Общая база")
+}
+
+System_Ext(partners, "Partner Devices", "External systems", "Датчики разных производителей")
+System_Ext(oldPartners, "Old Partner Devices", "External systems", "Старые датчики которые уже установлены")
+
+' Пользователь
+Rel(user, apiServer, "Использует", "HTTPS")
+
+' Прямое управление устройствами
+Rel(apiServer, device, "Работа через новый API", "HTTPS/REST")
+
+' Телеметрия
+Rel(device, telemetry, "Передача показаний", "MQTT / WebSocket")
+
+' Хранилища
+Rel(device, db, "Конфигурация устройств", "SQL")
+Rel(telemetry, db, "Сохранение телеметрии", "TSDB")
+Rel(apiServer, db, "Старый функционал", "HTTPS/REST")
+
+' Внешние реализации сервисов
+Rel(device, partners, "Получение данных от внешних сервисов", "HTTP / MQTT")
+Rel(apiServer, oldPartners, "Запрос старого функционала", "HTTPS/REST")
+
+@enduml
